@@ -1,0 +1,6 @@
+.esphome/
+secrets.yaml
+*.pyc
+__pycache__/
+.vscode/
+.claude/

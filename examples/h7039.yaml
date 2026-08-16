@@ -1,0 +1,58 @@
+substitutions:
+  name: govee-outdoor-lights
+  friendly_name: Outdoor Lights
+  # Number of physical bulbs on the string. Each bulb is 2 WS2811 drivers
+  # (1 warm-white, 1 RGB), so num_leds below must always be exactly 2x this
+  # (the build will fail with a clear error if they don't match).
+  num_bulbs: "30"
+  num_leds: "60"
+  # Data-line GPIO on your replacement ESP32 board.
+  data_pin: GPIO16
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev # replace with whatever matches your specific replacement board
+  framework:
+    type: esp-idf
+
+# Lets this device load the govee_rgbww component from this repo.
+external_components:
+  - source:
+      type: local
+      path: ../components
+
+logger:
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+api:
+ota:
+  platform: esphome
+
+light:
+  # Physical layer: the raw WS2811 chain, 2 drivers per bulb. Not exposed to
+  # Home Assistant directly - the govee_rgbww light below is what you use.
+  - platform: esp32_rmt_led_strip
+    id: govee_physical_strip
+    internal: true
+    pin: ${data_pin}
+    chipset: WS2811
+    num_leds: ${num_leds}
+    rgb_order: RGB # verify against the real string - swap if colors are wrong
+    is_rgbw: false
+
+  # Logical layer: what actually shows up in Home Assistant, one RGBW pixel
+  # per bulb, with standard ESPHome addressable effects available.
+  - platform: govee_rgbww
+    name: None # use the device name as the entity name
+    strip_id: govee_physical_strip
+    num_bulbs: ${num_bulbs}
+    ww_channel: red # verify against the real string - swap if white LEDs stay dark
+    effects:
+      - addressable_rainbow:
+      - addressable_color_wipe:
+      - addressable_scan:
+      - addressable_twinkle:
