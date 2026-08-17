@@ -18,11 +18,18 @@ esp32:
   framework:
     type: esp-idf
 
-# Lets this device load the govee_rgbww component from this repo.
+# Lets this device load the govee_rgbww component. `source: components` is
+# resolved relative to *this YAML file*, so as written this assumes the
+# Home Assistant ESPHome add-on layout: a `components/govee_rgbww/` folder
+# copied in next to your device YAML (see README's add-on section).
 external_components:
-  - source:
-      type: local
-      path: ../components
+  - source: components
+    components: [ govee_rgbww ]
+  # Alternative: pull the component straight from GitHub instead of a local
+  # copy - no manual copying/re-copying needed on updates. Pin @main to a
+  # tag/commit instead for a stable, non-moving version.
+  # - source: github://Codethetical/esphome-govee-rgbww@main
+  #   components: [ govee_rgbww ]
 
 logger:
 wifi:

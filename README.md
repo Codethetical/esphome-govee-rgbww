@@ -60,9 +60,8 @@ for the implementation.
 
 ```yaml
 external_components:
-  - source:
-      type: local
-      path: components # or a github:// source once this repo has a remote
+  - source: components # local checkout of this repo; see alternatives below
+    components: [ govee_rgbww ]
 
 light:
   - platform: esp32_rmt_led_strip
@@ -95,28 +94,41 @@ device config (wifi/api/ota included).
 
 ### Using with the Home Assistant ESPHome add-on
 
-The `external_components` `local` path above is resolved **relative to the
-YAML file**, not the repo. If you compile straight from this repo (as in
-`examples/h7039.yaml`, which lives in a subfolder) that's `../components`.
-If you're using the Home Assistant ESPHome add-on/dashboard, your device
-YAML normally lives directly in `/config/esphome/`, with no copy of this
-repo alongside it — so you need to get the component there yourself:
+A `local` `external_components` path is resolved **relative to the YAML
+file**, not the repo. If you're using the Home Assistant ESPHome
+add-on/dashboard, your device YAML normally lives directly in
+`/config/esphome/`, with no copy of this repo alongside it, so a local path
+needs some setup. Two ways to handle that:
+
+**Option 1 — pull from GitHub (recommended, no manual copying):**
+
+```yaml
+external_components:
+  - source: github://Codethetical/esphome-govee-rgbww@main
+    components: [ govee_rgbww ]
+```
+
+The add-on fetches the component straight from this repo at compile time
+and re-checks for updates on the `refresh` interval (default `1d`). Pin
+`@main` to a tag or commit for a version that won't move under you.
+
+**Option 2 — copy the component in locally:**
 
 1. Copy the whole `components/govee_rgbww/` folder (keep that folder name)
    into `/config/esphome/components/`, giving you
    `/config/esphome/components/govee_rgbww/...`.
 2. In your device's YAML (e.g. `/config/esphome/govee-outdoor-lights.yaml`),
-   point at it as a sibling folder instead:
+   point at it as a sibling folder:
    ```yaml
    external_components:
-     - source:
-         type: local
-         path: components
+     - source: components
+       components: [ govee_rgbww ]
    ```
 3. Whenever you pull an updated version of this component, re-copy
    `components/govee_rgbww/` into the add-on's `components/` folder — the
    add-on won't see repo changes on its own since there's no git link
-   between the two.
+   between the two. This is what [`examples/h7039.yaml`](examples/h7039.yaml)
+   is set up for.
 
 ### Config reference: `govee_rgbww`
 
