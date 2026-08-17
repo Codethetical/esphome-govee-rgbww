@@ -27,6 +27,14 @@ board and strip. If your board's data output is 3.3V and the LED strip runs
 at 5V+ logic, you likely need a level shifter on the data line — this is
 board/strip-specific and isn't something this repo can determine for you.
 
+**Tested board:** this project targets a generic ESP32 board, but the only
+board it's actually been tested on is the Gledopto GL-C-310WL (available from
+Amazon). The Govee power supply outputs 36V, which is what the original
+driver PCB (and LEDs) expect — it is **not** safe to feed directly into an
+ESP32 board. Reuse the Govee supply, but add a step-down (buck) converter to
+bring 36V down to whatever the replacement board needs (typically 5V) before
+powering the ESP32 module.
+
 ## How it works
 
 Two `light:` platforms compose together:
@@ -73,7 +81,14 @@ light:
     effects:
       - addressable_rainbow:
       - addressable_color_wipe:
+      - addressable_scan:
+      - addressable_twinkle:
 ```
+
+These are just the standard ESPHome addressable effects — since `govee_rgbww`
+extends the addressable light schema, any other effect from the
+[addressable effects list](https://esphome.io/components/light/index.html#addressable-light-effects)
+(e.g. `addressable_flicker`, `addressable_fireworks`) works too.
 
 See [`examples/h7039.yaml`](examples/h7039.yaml) for a complete, runnable
 device config (wifi/api/ota included).
