@@ -22,7 +22,6 @@ class GoveeRgbwwLightOutput : public light::AddressableLight {
  public:
   GoveeRgbwwLightOutput(light::LightState *strip_state, int32_t num_bulbs, WWChannel ww_channel);
 
-  void setup() override;
   void write_state(light::LightState *state) override;
   float get_setup_priority() const override;
   void dump_config() override;

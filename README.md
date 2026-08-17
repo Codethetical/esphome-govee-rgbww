@@ -78,6 +78,31 @@ light:
 See [`examples/h7039.yaml`](examples/h7039.yaml) for a complete, runnable
 device config (wifi/api/ota included).
 
+### Using with the Home Assistant ESPHome add-on
+
+The `external_components` `local` path above is resolved **relative to the
+YAML file**, not the repo. If you compile straight from this repo (as in
+`examples/h7039.yaml`, which lives in a subfolder) that's `../components`.
+If you're using the Home Assistant ESPHome add-on/dashboard, your device
+YAML normally lives directly in `/config/esphome/`, with no copy of this
+repo alongside it — so you need to get the component there yourself:
+
+1. Copy the whole `components/govee_rgbww/` folder (keep that folder name)
+   into `/config/esphome/components/`, giving you
+   `/config/esphome/components/govee_rgbww/...`.
+2. In your device's YAML (e.g. `/config/esphome/govee-outdoor-lights.yaml`),
+   point at it as a sibling folder instead:
+   ```yaml
+   external_components:
+     - source:
+         type: local
+         path: components
+   ```
+3. Whenever you pull an updated version of this component, re-copy
+   `components/govee_rgbww/` into the add-on's `components/` folder — the
+   add-on won't see repo changes on its own since there's no git link
+   between the two.
+
 ### Config reference: `govee_rgbww`
 
 Extends ESPHome's standard

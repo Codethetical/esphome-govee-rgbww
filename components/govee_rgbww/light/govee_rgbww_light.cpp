@@ -17,9 +17,13 @@ GoveeRgbwwLightOutput::GoveeRgbwwLightOutput(light::LightState *strip_state, int
                                               WWChannel ww_channel)
     : physical_(static_cast<light::AddressableLight *>(strip_state->get_output())),
       num_bulbs_(num_bulbs),
-      ww_channel_(ww_channel) {}
-
-void GoveeRgbwwLightOutput::setup() {
+      ww_channel_(ww_channel) {
+  // Allocated here rather than in setup(): LightState::setup() applies the
+  // light's initial/restored state immediately, which writes into this
+  // buffer via write_state()/get_view_internal() - and LightState's setup()
+  // runs before this component's own setup() (both are registered at the
+  // same setup priority, LightState first). Allocating in the constructor
+  // guarantees the buffer exists before anything can write to it.
   RAMAllocator<uint8_t> allocator;
 
   this->buffer_ = allocator.allocate(this->num_bulbs_ * 4);
