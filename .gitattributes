@@ -1,0 +1,6 @@
+# Git for Windows ships core.autocrlf=true in its system config, which would
+# check these out with CRLF endings. A shell script with CRLF has a literal
+# carriage return in its `#!/bin/sh` line, so it fails to run at all. Pin them
+# to LF regardless of the cloning machine's settings.
+.githooks/* text eol=lf
+*.sh text eol=lf
