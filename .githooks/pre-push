@@ -1,0 +1,83 @@
+#!/bin/sh
+# Refuse to push a release tag whose tagged commit disagrees with the tag name.
+#
+# The failure this exists to prevent: cutting vX.Y.Z while the version
+# references still say something else. That publishes a release whose README
+# tells users to pin a source tag that does not exist, and whose firmware
+# reports the wrong version in dump_config(). Fixing it afterwards means
+# moving an already-published tag.
+#
+# Enable with:  git config core.hooksPath .githooks
+#
+# Checks run against the *tagged commit's* content rather than the working
+# tree, because a tag can point at any commit - including one that predates
+# whatever is currently checked out.
+
+set -u
+
+HEADER='components/govee_rgbww/light/govee_rgbww_light.h'
+CHANGELOG='CHANGELOG.md'
+PINNED='README.md examples/h7039.yaml'
+
+fail=0
+note() { echo "pre-push: $1" >&2; }
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Only release tags are subject to this; branches push normally.
+  case "$local_ref" in
+    refs/tags/v[0-9]*) ;;
+    *) continue ;;
+  esac
+
+  # An all-zero local sha is a tag deletion - nothing to validate.
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+
+  tag=${local_ref#refs/tags/}
+  version=${tag#v}
+  commit=$(git rev-parse "${local_sha}^{commit}" 2>/dev/null) || {
+    note "$tag: cannot resolve tagged commit"
+    fail=1
+    continue
+  }
+
+  header_version=$(git show "$commit:$HEADER" 2>/dev/null |
+    sed -n 's/^#define GOVEE_RGBWW_VERSION "\(.*\)".*/\1/p')
+  if [ "$header_version" != "$version" ]; then
+    note "$tag: $HEADER defines \"${header_version:-<not found>}\", expected \"$version\""
+    fail=1
+  fi
+
+  if ! git show "$commit:$CHANGELOG" 2>/dev/null | grep -q "^## \[$version\] - "; then
+    note "$tag: $CHANGELOG has no '## [$version] - <date>' heading"
+    fail=1
+  fi
+
+  if ! git show "$commit:$CHANGELOG" 2>/dev/null | grep -q "^\[$version\]: "; then
+    note "$tag: $CHANGELOG has no '[$version]:' link reference"
+    fail=1
+  fi
+
+  # Every copy-pasteable github:// pin must name this tag. @main is not a pin
+  # and is deliberately not matched here.
+  for f in $PINNED; do
+    stale=$(git show "$commit:$f" 2>/dev/null |
+      grep -o '@v[0-9][0-9A-Za-z.-]*' | grep -vx "@$tag" | sort -u | tr '\n' ' ')
+    if [ -n "$stale" ]; then
+      note "$tag: $f pins ${stale}- expected @$tag"
+      fail=1
+    fi
+  done
+done
+
+if [ "$fail" -ne 0 ]; then
+  note ''
+  note 'Tagged commit does not match the tag name. Bump the versions, commit,'
+  note 'then move the tag onto the new commit before pushing again.'
+  exit 1
+fi
+
+exit 0
