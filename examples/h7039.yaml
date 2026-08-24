@@ -8,6 +8,9 @@ substitutions:
   num_leds: "60"
   # Data-line GPIO on your replacement ESP32 board.
   data_pin: GPIO16
+  # Total power budget for the string, as a fraction of "every LED at full".
+  # Minimum 10%. See the light: block below.
+  max_power: "100%"
 
 esphome:
   name: ${name}
@@ -26,9 +29,10 @@ external_components:
   - source: components
     components: [ govee_rgbww ]
   # Alternative: pull the component straight from GitHub instead of a local
-  # copy - no manual copying/re-copying needed on updates. Pin @main to a
-  # tag/commit instead for a stable, non-moving version.
-  # - source: github://Codethetical/esphome-govee-rgbww@main
+  # copy - no manual copying/re-copying needed on updates. The @v0.9.0 tag
+  # pins a released version; use @main to track the latest development state
+  # instead, accepting that it moves between builds.
+  # - source: github://Codethetical/esphome-govee-rgbww@v0.9.0
   #   components: [ govee_rgbww ]
 
 logger:
@@ -54,12 +58,59 @@ light:
   # Logical layer: what actually shows up in Home Assistant, one RGBW pixel
   # per bulb, with standard ESPHome addressable effects available.
   - platform: govee_rgbww
+    # `id:` names the light entity; `output_id:` names this component's own
+    # output object, which is what carries set_max_power()/get_load_fraction().
+    # The number and sensor below need the latter.
+    id: govee_light
+    output_id: govee_light_out
     name: None # use the device name as the entity name
     strip_id: govee_physical_strip
     num_bulbs: ${num_bulbs}
     ww_channel: red # verify against the real string - swap if white LEDs stay dark
+    # Caps total string draw so full-brightness white can't brown out the
+    # supply. This is the value that survives a reboot - the number entity
+    # below is only for finding it. Start at 100%, walk it down until the
+    # brownout stops, then subtract ~10% for margin.
+    max_power: ${max_power}
+    # Relative current draw of the warm-white LED vs one RGB die. 1.0 assumes
+    # they're equal; raise it if white-heavy scenes brown out at budgets that
+    # colored scenes survive.
+    white_weight: 1.0
     effects:
       - addressable_rainbow:
       - addressable_color_wipe:
       - addressable_scan:
       - addressable_twinkle:
+
+# Live tuning for max_power, so finding the brownout threshold is a slider
+# drag instead of a flash cycle. Deliberately NOT restore_value: the YAML
+# max_power above is the authoritative boot value - otherwise a restored
+# number could race the light's own restored state and let one full-power
+# frame through before the limit applies. Once you've found your number, put
+# it in the substitution above and delete this block.
+number:
+  - platform: template
+    name: "LED Power Limit"
+    entity_category: config
+    unit_of_measurement: "%"
+    min_value: 10
+    max_value: 100
+    step: 5
+    # Reads the component's real budget rather than optimistically echoing
+    # the slider, so the displayed value reflects the C++ clamp to >= 10%.
+    update_interval: 10s
+    lambda: return id(govee_light_out).get_max_power() * 100.0f;
+    set_action:
+      - lambda: id(govee_light_out).set_max_power(x / 100.0f);
+
+# Reports what the current frame *wants* to draw, before limiting, as a
+# fraction of the string's theoretical maximum. Above your max_power means
+# the limiter is actively scaling the scene back.
+sensor:
+  - platform: template
+    name: "LED Load"
+    entity_category: diagnostic
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: return id(govee_light_out).get_load_fraction() * 100.0f;

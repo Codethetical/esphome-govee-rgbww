@@ -4,3 +4,6 @@ secrets.yaml
 __pycache__/
 .vscode/
 .claude/
+
+# Local dev notes, not for publication
+DEVELOPMENT.md
