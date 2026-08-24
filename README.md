@@ -105,12 +105,12 @@ needs some setup. Two ways to handle that:
 
 ```yaml
 external_components:
-  - source: github://Codethetical/esphome-govee-rgbww@v0.9.0
+  - source: github://Codethetical/esphome-govee-rgbww@v0.9.1
     components: [ govee_rgbww ]
 ```
 
 The add-on fetches the component straight from this repo at compile time.
-The `@v0.9.0` suffix pins it to a released tag, so the component only
+The `@v0.9.1` suffix pins it to a released tag, so the component only
 changes when you change that line — see [Versioning](#versioning) for how to
 pick a version. Use `@main` instead to track the latest development state;
 the add-on then re-checks for updates on the `refresh` interval (default
@@ -304,7 +304,7 @@ that was flashed months ago can still identify itself:
 
 ```
 [C][govee_rgbww:150]: Govee RGBWW Light:
-[C][govee_rgbww:150]:   Version: 0.9.0
+[C][govee_rgbww:150]:   Version: 0.9.1
 [C][govee_rgbww:150]:   Bulbs: 30
 ```
 

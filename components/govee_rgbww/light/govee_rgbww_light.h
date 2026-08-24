@@ -12,7 +12,7 @@ namespace esphome::govee_rgbww {
 // components/ folder goes stale with no git link to notice. Bump together
 // with the git tag and CHANGELOG.md - see the release checklist in
 // DEVELOPMENT.md.
-#define GOVEE_RGBWW_VERSION "0.9.0"
+#define GOVEE_RGBWW_VERSION "0.9.1"
 
 // Which physical channel of the warm-white driver IC the LED is actually
 // wired to. Not knowable from software - verify during hardware bring-up.

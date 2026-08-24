@@ -7,7 +7,7 @@ as scoped in the [Versioning](README.md#versioning) section of the README.
 
 ## [Unreleased]
 
-## [0.9.0] - 2026-08-24
+## [0.9.1] - 2026-08-24
 
 First tagged release. Everything below is what the component ships with, not
 a diff against an earlier version.
@@ -33,5 +33,5 @@ a diff against an earlier version.
   add-on setup, config reference, power-limiting calibration procedure, and
   a bring-up checklist; `examples/h7039.yaml` as a working device config.
 
-[Unreleased]: https://github.com/Codethetical/esphome-govee-rgbww/compare/v0.9.0...HEAD
-[0.9.0]: https://github.com/Codethetical/esphome-govee-rgbww/releases/tag/v0.9.0
+[Unreleased]: https://github.com/Codethetical/esphome-govee-rgbww/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/Codethetical/esphome-govee-rgbww/releases/tag/v0.9.1

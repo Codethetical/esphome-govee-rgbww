@@ -29,10 +29,10 @@ external_components:
   - source: components
     components: [ govee_rgbww ]
   # Alternative: pull the component straight from GitHub instead of a local
-  # copy - no manual copying/re-copying needed on updates. The @v0.9.0 tag
+  # copy - no manual copying/re-copying needed on updates. The @v0.9.1 tag
   # pins a released version; use @main to track the latest development state
   # instead, accepting that it moves between builds.
-  # - source: github://Codethetical/esphome-govee-rgbww@v0.9.0
+  # - source: github://Codethetical/esphome-govee-rgbww@v0.9.1
   #   components: [ govee_rgbww ]
 
 logger:
