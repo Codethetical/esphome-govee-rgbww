@@ -1,0 +1,26 @@
+name: Release check
+
+# Backstop for the .githooks/pre-push guard, which can only see pushes from a
+# clone that has core.hooksPath set. This catches a tag cut from any other
+# machine, or made through the GitHub web UI - after publication rather than
+# before, but a red check on the tag beats a silently broken release.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  version-agreement:
+    name: Tag matches version references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # GITHUB_REF_NAME is the tag name; read from the environment rather than
+      # interpolated into the script, since tag names are arbitrary text.
+      # actions/checkout leaves the tagged commit at HEAD.
+      - name: Check version references against tag
+        run: sh scripts/check-release-version.sh "$GITHUB_REF_NAME" HEAD

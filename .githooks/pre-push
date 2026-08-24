@@ -9,18 +9,20 @@
 #
 # Enable with:  git config core.hooksPath .githooks
 #
-# Checks run against the *tagged commit's* content rather than the working
-# tree, because a tag can point at any commit - including one that predates
-# whatever is currently checked out.
+# The actual rules live in scripts/check-release-version.sh, shared with the
+# release-check workflow. This hook only decides which refs to run them on.
 
 set -u
 
-HEADER='components/govee_rgbww/light/govee_rgbww_light.h'
-CHANGELOG='CHANGELOG.md'
-PINNED='README.md examples/h7039.yaml'
+root=$(git rev-parse --show-toplevel) || exit 1
+checker="$root/scripts/check-release-version.sh"
+
+if [ ! -f "$checker" ]; then
+  echo "pre-push: missing $checker - cannot validate release tags" >&2
+  exit 1
+fi
 
 fail=0
-note() { echo "pre-push: $1" >&2; }
 
 # stdin: <local ref> <local sha> <remote ref> <remote sha>
 while read -r local_ref local_sha remote_ref remote_sha; do
@@ -37,46 +39,17 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   esac
 
   tag=${local_ref#refs/tags/}
-  version=${tag#v}
   commit=$(git rev-parse "${local_sha}^{commit}" 2>/dev/null) || {
-    note "$tag: cannot resolve tagged commit"
+    echo "pre-push: $tag: cannot resolve tagged commit" >&2
     fail=1
     continue
   }
 
-  header_version=$(git show "$commit:$HEADER" 2>/dev/null |
-    sed -n 's/^#define GOVEE_RGBWW_VERSION "\(.*\)".*/\1/p')
-  if [ "$header_version" != "$version" ]; then
-    note "$tag: $HEADER defines \"${header_version:-<not found>}\", expected \"$version\""
-    fail=1
-  fi
-
-  if ! git show "$commit:$CHANGELOG" 2>/dev/null | grep -q "^## \[$version\] - "; then
-    note "$tag: $CHANGELOG has no '## [$version] - <date>' heading"
-    fail=1
-  fi
-
-  if ! git show "$commit:$CHANGELOG" 2>/dev/null | grep -q "^\[$version\]: "; then
-    note "$tag: $CHANGELOG has no '[$version]:' link reference"
-    fail=1
-  fi
-
-  # Every copy-pasteable github:// pin must name this tag. @main is not a pin
-  # and is deliberately not matched here.
-  for f in $PINNED; do
-    stale=$(git show "$commit:$f" 2>/dev/null |
-      grep -o '@v[0-9][0-9A-Za-z.-]*' | grep -vx "@$tag" | sort -u | tr '\n' ' ')
-    if [ -n "$stale" ]; then
-      note "$tag: $f pins ${stale}- expected @$tag"
-      fail=1
-    fi
-  done
+  sh "$checker" "$tag" "$commit" || fail=1
 done
 
 if [ "$fail" -ne 0 ]; then
-  note ''
-  note 'Tagged commit does not match the tag name. Bump the versions, commit,'
-  note 'then move the tag onto the new commit before pushing again.'
+  echo 'pre-push: refusing to push; nothing was sent.' >&2
   exit 1
 fi
 
