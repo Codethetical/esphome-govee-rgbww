@@ -57,6 +57,11 @@ light:
 
   # Logical layer: what actually shows up in Home Assistant, one RGBW pixel
   # per bulb, with standard ESPHome addressable effects available.
+  # Home Assistant sees two mutually exclusive color modes - a color wheel and
+  # a color temperature slider. They have to be exclusive: the cool end of the
+  # temperature range is the RGB dies driven together, so they cannot show a
+  # color at the same time. See "Color and white are separate modes" in the
+  # README.
   - platform: govee_rgbww
     # `id:` names the light entity; `output_id:` names this component's own
     # output object, which is what carries set_max_power()/get_load_fraction().
@@ -66,16 +71,52 @@ light:
     name: None # use the device name as the entity name
     strip_id: govee_physical_strip
     num_bulbs: ${num_bulbs}
-    ww_channel: red # verify against the real string - swap if white LEDs stay dark
+    # Which channel of each bulb's white driver the warm white LED hangs off.
+    # `red` is confirmed on this string; swap it if white stays dark.
+    ww_channel: red
+    # No cw_channel: this string has one white LED per bulb, so the cool end of
+    # the Kelvin slider is synthesized by driving the bulb's RGB dies together.
+    # Set cw_channel only if bring-up shows a second white channel is really
+    # wired - see examples/bringup.yaml.
+    #
+    # cool_white_rgb tints that synthetic white and matches its brightness to
+    # the warm LED. Start at the identity below, put the slider at each end in
+    # turn, and pull the channels down until cool reads white rather than blue
+    # and the two ends look equally bright. Three dies against one warm LED
+    # means the starting point will almost certainly be too bright.
+    cool_white_rgb: [100%, 100%, 100%]
+    # Bounds of the Kelvin slider. With the synthetic cool white the cold end
+    # is a label rather than a measurement - the real temperature is whatever
+    # the dies and cool_white_rgb produce. Adjust both by eye.
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    # Holds white output flat across the temperature slider. With this off the
+    # midpoint runs both the warm LED and the synthetic cool white at full, so
+    # white peaks in the middle. Defaults to true here, unlike ESPHome's stock
+    # cwww/rgbww platforms.
+    constant_brightness: true
+    # Brightness curve. ESPHome's default of 2.8 makes every step below 100%
+    # much dimmer than the stock Govee controller, whose scale is close to
+    # linear in PWM duty: measured side by side, 50% on the stock string
+    # matched about 75% here. 1.0 tracks the original across the slider; 100%
+    # is unchanged either way. Raise it toward 2.8 if you prefer finer control
+    # at the dim end over matching the original.
+    gamma_correct: 1.0
     # Caps total string draw so full-brightness white can't brown out the
     # supply. This is the value that survives a reboot - the number entity
     # below is only for finding it. Start at 100%, walk it down until the
     # brownout stops, then subtract ~10% for margin.
     max_power: ${max_power}
-    # Relative current draw of the warm-white LED vs one RGB die. 1.0 assumes
+    # Relative current draw of the warm white LED vs one RGB die. 1.0 assumes
     # they're equal; raise it if white-heavy scenes brown out at budgets that
-    # colored scenes survive.
+    # colored scenes survive. The synthetic cool white draws through the RGB
+    # driver and is already counted there, so this only describes the warm LED.
     white_weight: 1.0
+    # Diagnostic entity reporting the component version, so a device's build
+    # can be identified from the Home Assistant UI rather than from its log.
+    # Optional - drop this key and no text sensor is created.
+    version:
+      name: "Component Version"
     effects:
       - addressable_rainbow:
       - addressable_color_wipe:

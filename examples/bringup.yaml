@@ -1,0 +1,185 @@
+# Hardware bring-up harness for a Govee H7039-style string.
+#
+# This config deliberately does NOT load govee_rgbww. It drives the raw WS2811
+# chain directly, one pixel at a time, so the string's actual structure can be
+# established without depending on anything the component assumes. Flash it,
+# work through the procedure below, then go back to h7039.yaml with the answers.
+#
+# WHAT THIS FOUND ON THE STRING IT WAS WRITTEN FOR
+#
+# Two WS2811 drivers per bulb, white driver on the even physical index, RGB on
+# the odd - and exactly ONE wired white LED, on the white driver's red channel.
+# There is no cool white emitter. That is why govee_rgbww defaults to
+# synthesizing the cool end of the Kelvin slider from the three RGB dies
+# (cool_white_rgb) and leaves cw_channel unset.
+#
+# Run the procedure below on your own string before trusting any of that. If
+# step 1 finds a second channel that lights a white LED, set cw_channel to it
+# and the RGB dies stay out of the white mix. If white output does not respond
+# to ww_channel no matter what you set it to, the driver ordering or the
+# two-drivers-per-bulb assumption is wrong for yours, and steps 2-3 are how you
+# find out which.
+#
+# PROCEDURE
+#
+# 0. Are the white driver's three outputs tied together onto one white LED?
+#    That is the failure mode where every ww_channel / cw_channel value looks
+#    identical while the white level still tracks brightness correctly: at
+#    either end of the Kelvin slider one channel carries the whole level and
+#    the other carries zero, so the sum - and therefore the light - never
+#    changes. Set Target = all and compare Channel = white (all three outputs
+#    at 255) against red, green and blue individually. Tied outputs make
+#    'white' roughly three times as bright as any single channel, on the same
+#    LED. Independent outputs light three separate emitters instead.
+#
+#    If they are tied, this string has one white LED per bulb, not two. Cool
+#    white does not exist on it, ww_channel / cw_channel are meaningless, and
+#    the component needs a single-white model rather than a debugged one.
+#
+# 1. Set Target = all, Channel = red, press Apply. Then green, then blue.
+#    Note for each: do the RGB dies light in that color? Do any white LEDs
+#    light? A channel that lights a white LED on every bulb is a white
+#    channel; one that lights the RGB die is an RGB channel.
+#
+# 2. Set Target = even, then Target = odd, repeating each channel.
+#    - Whites on one parity and colors on the other: the two-drivers-per-bulb
+#      model holds. Whichever parity lit the whites is the white driver, and
+#      which channel(s) lit them are your ww_channel / cw_channel.
+#    - Both parities behave identically: there is one driver per bulb, not
+#      two. num_leds should equal num_bulbs and the component's whole
+#      interleave model needs revisiting.
+#
+# 3. Set Target = single and walk Index through 0, 1, 2, 3, 4 with Channel
+#    fixed. Watch which physical bulb lights at each step, and which emitter
+#    inside it.
+#    - Indices 0 and 1 both affect bulb 1: two drivers per bulb, confirmed.
+#    - Index 0 -> bulb 1, index 1 -> bulb 2: one driver per bulb.
+#    - Nothing lights above some index: the chain is shorter than num_leds.
+#
+# 4. If step 1 found only ONE channel that lights a white LED, the string has
+#    a single white LED per bulb - the case this component defaults to. Leave
+#    cw_channel unset and calibrate cool_white_rgb by eye instead; see
+#    "Calibrating the cool white" in the README.
+#
+# Report the answers to steps 1-3 and the correct config follows from them.
+
+substitutions:
+  name: govee-bringup
+  friendly_name: Govee Bring-up
+  data_pin: GPIO16
+  # Total WS2811 drivers on the chain. Start from whatever you believe it is;
+  # step 3 will tell you if it is wrong.
+  num_leds: "90"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+api:
+ota:
+  platform: esphome
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: strip
+    # Visible to Home Assistant here, unlike in h7039.yaml - this harness is
+    # the only thing driving it.
+    name: "Raw strip"
+    pin: ${data_pin}
+    chipset: WS2811
+    num_leds: ${num_leds}
+    rgb_order: RGB
+    is_rgbw: false
+    # Both off so the bytes reaching the wire are exactly the bytes below.
+    # A test that goes through gamma correction and a fade is a test of
+    # gamma correction and fades.
+    gamma_correct: 0
+    default_transition_length: 0s
+
+select:
+  - platform: template
+    id: test_target
+    name: "Test target"
+    optimistic: true
+    initial_option: all
+    options: [all, even, odd, single]
+
+  - platform: template
+    id: test_channel
+    name: "Test channel"
+    optimistic: true
+    initial_option: red
+    options: [red, green, blue, white]
+
+number:
+  - platform: template
+    id: test_index
+    name: "Test index"
+    optimistic: true
+    initial_value: 0
+    min_value: 0
+    max_value: 255
+    step: 1
+
+button:
+  - platform: template
+    name: "Apply"
+    on_press:
+      - lambda: |-
+          auto *led = static_cast<light::AddressableLight *>(id(strip).get_output());
+
+          // Full brightness with no transition, so the correction the views
+          // apply is the identity and our bytes survive to the buffer.
+          auto call = id(strip).turn_on();
+          call.set_brightness(1.0f);
+          call.set_transition_length(0);
+          call.perform();
+
+          const std::string channel = id(test_channel).state;
+          Color c(255, 255, 255);
+          if (channel == "red") {
+            c = Color(255, 0, 0);
+          } else if (channel == "green") {
+            c = Color(0, 255, 0);
+          } else if (channel == "blue") {
+            c = Color(0, 0, 255);
+          }
+
+          for (int32_t i = 0; i < led->size(); i++)
+            (*led)[i] = Color(0, 0, 0);
+
+          const std::string target = id(test_target).state;
+          const int32_t index = (int32_t) id(test_index).state;
+          if (target == "single") {
+            if (index >= 0 && index < led->size())
+              (*led)[index] = c;
+          } else if (target == "even") {
+            for (int32_t i = 0; i < led->size(); i += 2)
+              (*led)[i] = c;
+          } else if (target == "odd") {
+            for (int32_t i = 1; i < led->size(); i += 2)
+              (*led)[i] = c;
+          } else {
+            for (int32_t i = 0; i < led->size(); i++)
+              (*led)[i] = c;
+          }
+
+          ESP_LOGI("bringup", "target=%s channel=%s index=%d over %d pixels", target.c_str(),
+                   channel.c_str(), (int) index, (int) led->size());
+          led->schedule_show();
+
+  - platform: template
+    name: "All off"
+    on_press:
+      - light.turn_off:
+          id: strip
+          transition_length: 0s
