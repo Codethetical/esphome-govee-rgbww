@@ -35,7 +35,7 @@ inline void mask_to_color_mode(Color &color, light::ColorMode mode) {
 // components/ folder goes stale with no git link to notice. Bump together
 // with the git tag and CHANGELOG.md - see the release checklist in
 // DEVELOPMENT.md.
-#define GOVEE_RGBWW_VERSION "0.9.2-dev"
+#define GOVEE_RGBWW_VERSION "0.9.2"
 
 // Which physical channel of the white driver IC a given white LED is actually
 // wired to. Not knowable from software - verify during hardware bring-up.

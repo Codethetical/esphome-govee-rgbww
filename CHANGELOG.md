@@ -7,6 +7,8 @@ as scoped in the [Versioning](README.md#versioning) section of the README.
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-09-15
+
 ### Added
 
 - Color temperature control. `cold_white_color_temperature` /
@@ -137,9 +139,9 @@ as scoped in the [Versioning](README.md#versioning) section of the README.
 
 ### Changed (diagnostics)
 
-- `GOVEE_RGBWW_VERSION` is `0.9.2-dev`, so `dump_config()` and the optional
-  `version:` sensor distinguish a build carrying this work from a stale
-  hand-copied `components/` folder. Bump to `0.9.2` when tagging.
+- `GOVEE_RGBWW_VERSION` is `0.9.2` (`0.9.2-dev` while this work was in
+  progress), so `dump_config()` and the optional `version:` sensor distinguish
+  a build carrying it from a stale hand-copied `components/` folder.
 
 - `dump_config()` names the cool white source — the RGB dies with their mix, or
   the channel a real cool LED sits on — since that is the first thing to check
@@ -177,5 +179,6 @@ a diff against an earlier version.
   add-on setup, config reference, power-limiting calibration procedure, and
   a bring-up checklist; `examples/h7039.yaml` as a working device config.
 
-[Unreleased]: https://github.com/Codethetical/esphome-govee-rgbww/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Codethetical/esphome-govee-rgbww/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/Codethetical/esphome-govee-rgbww/releases/tag/v0.9.2
 [0.9.1]: https://github.com/Codethetical/esphome-govee-rgbww/releases/tag/v0.9.1

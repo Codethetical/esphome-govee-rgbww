@@ -138,12 +138,12 @@ needs some setup. Two ways to handle that:
 
 ```yaml
 external_components:
-  - source: github://Codethetical/esphome-govee-rgbww@v0.9.1
+  - source: github://Codethetical/esphome-govee-rgbww@v0.9.2
     components: [ govee_rgbww ]
 ```
 
 The add-on fetches the component straight from this repo at compile time.
-The `@v0.9.1` suffix pins it to a released tag, so the component only
+The `@v0.9.2` suffix pins it to a released tag, so the component only
 changes when you change that line — see [Versioning](#versioning) for how to
 pick a version. Use `@main` instead to track the latest development state;
 the add-on then re-checks for updates on the `refresh` interval (default
@@ -243,7 +243,7 @@ pulling its log:
 ```
 
 That produces a diagnostic text sensor whose state is the component version
-string, e.g. `0.9.1`. It is published once at boot and never changes — it is a
+string, e.g. `0.9.2`. It is published once at boot and never changes — it is a
 compile-time constant, not a runtime reading.
 
 This is worth adding if you track this repo with `@main`, or if you keep a
@@ -488,7 +488,7 @@ that was flashed months ago can still identify itself:
 
 ```
 [C][govee_rgbww:xxx]: Govee RGBWW Light:
-[C][govee_rgbww:xxx]:   Version: 0.9.1
+[C][govee_rgbww:xxx]:   Version: 0.9.2
 [C][govee_rgbww:xxx]:   Bulbs: 30
 [C][govee_rgbww:xxx]:   WW Channel: RED (2700K)
 [C][govee_rgbww:xxx]:   CW Channel: GREEN (6500K)
